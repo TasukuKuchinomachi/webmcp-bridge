@@ -1,0 +1,31 @@
+{
+  "manifest_version": 3,
+  "name": "WebMCP Bridge",
+  "version": "0.1.0",
+  "description": "Expose WebMCP tools to external MCP clients",
+  "permissions": [
+    "nativeMessaging",
+    "activeTab",
+    "scripting",
+    "tabs"
+  ],
+  "host_permissions": ["<all_urls>"],
+  "background": {
+    "service_worker": "dist/background.global.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["dist/content-isolated.global.js"],
+      "run_at": "document_start",
+      "world": "ISOLATED"
+    },
+    {
+      "matches": ["<all_urls>"],
+      "js": ["dist/content-main.global.js"],
+      "run_at": "document_start",
+      "world": "MAIN"
+    }
+  ],
+  "minimum_chrome_version": "116"
+}

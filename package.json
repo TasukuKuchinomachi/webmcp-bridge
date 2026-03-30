@@ -1,0 +1,29 @@
+{
+  "name": "webmcp-bridge",
+  "version": "0.1.0",
+  "description": "Bridge WebMCP tools to MCP protocol via Chrome Extension + Native Messaging",
+  "type": "module",
+  "bin": {
+    "webmcp-bridge": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "tsup",
+    "build:extension": "tsup --config tsup.extension.config.ts",
+    "build:all": "npm run build && npm run build:extension",
+    "postinstall": "node ./dist/postinstall.js || true"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.0"
+  },
+  "devDependencies": {
+    "@types/chrome": "^0.0.300",
+    "@types/node": "^22.0.0",
+    "tsup": "^8.3.0",
+    "typescript": "^5.7.0"
+  },
+  "files": [
+    "dist",
+    "extension/dist"
+  ],
+  "license": "MIT"
+}

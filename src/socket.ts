@@ -61,7 +61,8 @@ export function createSocketServer(
       for (const line of lines) {
         if (line.trim()) {
           try {
-            onMessage(JSON.parse(line), (msg) => {
+            const parsed = JSON.parse(line);
+            onMessage(parsed, (msg) => {
               conn.write(JSON.stringify(msg) + "\n");
             });
           } catch {

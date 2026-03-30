@@ -50,11 +50,11 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   }
 
   if (nativePort) {
-    // source フィールドを除いて Native Host に転送
     const { source, ...payload } = msg;
     nativePort.postMessage(payload);
   }
 
+  sendResponse({ ok: true });
   return false;
 });
 

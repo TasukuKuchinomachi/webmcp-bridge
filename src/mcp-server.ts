@@ -38,6 +38,10 @@ export async function startMCPServer(): Promise<void> {
     switch (msg.type) {
       case "tools-updated":
         tools = msg.tools;
+        // MCP クライアントにツール一覧の変更を通知
+        server.notification({
+          method: "notifications/tools/list_changed",
+        }).catch(() => {});
         break;
 
       case "call-result": {
@@ -60,10 +64,10 @@ export async function startMCPServer(): Promise<void> {
     }
   });
 
-  // MCP サーバー
+  // MCP サーバー（先に作成して socket ハンドラから参照できるようにする）
   const server = new Server(
     { name: "webmcp-bridge", version: "0.1.0" },
-    { capabilities: { tools: {} } }
+    { capabilities: { tools: { listChanged: true } } }
   );
 
   server.setRequestHandler(ListToolsRequestSchema, async () => {

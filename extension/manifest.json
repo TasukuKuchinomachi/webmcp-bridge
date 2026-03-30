@@ -3,6 +3,7 @@
   "name": "WebMCP Bridge",
   "version": "0.1.0",
   "description": "Expose WebMCP tools to external MCP clients",
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA2JzPrwPrJSVcqNaOD+vJIZmknsSasPXRiRP6CsSUR/DrNIWAgYLDwoGCGxTS6FY6ZTMKjfAg0h+tZKi2B9Eoc43pv+i3+3LplAam9qRLBJXj/IjqUJFxp7Yu+ATEtWRdl2Uzbr5BbFbFLS7h4QZF814gN8KGM6FvEBEMIOVca2u55tFvqW0qbeg639y00A47NimTRuHph2b1J3IgrFYA2BhQQl0sX+8oS4GmEC2xeeZlI5eHEclrwFRB3DAV6Ze5CeN9uEpy+faqhFB+XcpWV9atBYHp7ShtA7M7uip9TtQLaZnuI1ZioIVghZo+YoG8vwtSthwDcS7+GuRjNO2uQwIDAQAB",
   "permissions": [
     "nativeMessaging",
     "activeTab",

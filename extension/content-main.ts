@@ -84,8 +84,9 @@ window.addEventListener("message", async (event) => {
 
 // navigator.modelContext をパッチ
 if (typeof navigator !== "undefined") {
-  if ((navigator as any).modelContext) {
-    patchModelContext((navigator as any).modelContext);
+  const mc = (navigator as any).modelContext;
+  if (mc) {
+    patchModelContext(mc);
   } else {
     // modelContext がまだ存在しない場合、setter で待機
     let _mc: any;
@@ -102,14 +103,12 @@ if (typeof navigator !== "undefined") {
         },
       });
     } catch {
-      // defineProperty が失敗した場合（ブラウザの制約）、polling で対応
       const interval = setInterval(() => {
         if ((navigator as any).modelContext) {
           clearInterval(interval);
           patchModelContext((navigator as any).modelContext);
         }
       }, 100);
-      // 30秒後に polling 停止
       setTimeout(() => clearInterval(interval), 30_000);
     }
   }

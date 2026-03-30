@@ -1,36 +1,51 @@
 import { connectToSocket, type BridgeMessage } from "./socket.js";
 
 /**
- * Native Messaging プロトコルで stdin からメッセージを読む。
- * 形式: 4byte LE 長さプレフィックス + JSON
+ * Native Messaging の stdin を data イベントで読み取るクラス。
+ * 4byte LE 長さプレフィックス + JSON のメッセージを逐次パースする。
  */
-function readNativeMessage(): Promise<unknown> {
-  return new Promise((resolve, reject) => {
-    const stdin = process.stdin;
+class NativeMessageReader {
+  private buffer = Buffer.alloc(0);
+  private onMessage: (msg: unknown) => void;
+  private onClose: () => void;
 
-    const readLength = () => {
-      const header = stdin.read(4);
-      if (!header) {
-        stdin.once("readable", readLength);
-        return;
+  constructor(onMessage: (msg: unknown) => void, onClose: () => void) {
+    this.onMessage = onMessage;
+    this.onClose = onClose;
+
+    process.stdin.on("data", (chunk: Buffer | string) => {
+      const buf = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+      this.buffer = Buffer.concat([this.buffer, buf]);
+      this.tryParse();
+    });
+
+    process.stdin.on("end", () => {
+      this.onClose();
+    });
+
+    process.stdin.resume();
+  }
+
+  private tryParse(): void {
+    while (true) {
+      // ヘッダー（4バイト）が揃うまで待つ
+      if (this.buffer.length < 4) return;
+
+      const len = this.buffer.readUInt32LE(0);
+
+      // ボディが揃うまで待つ
+      if (this.buffer.length < 4 + len) return;
+
+      const body = this.buffer.subarray(4, 4 + len);
+      this.buffer = this.buffer.subarray(4 + len);
+
+      try {
+        this.onMessage(JSON.parse(body.toString()));
+      } catch {
+        // ignore parse errors
       }
-      const len = header.readUInt32LE(0);
-      const readBody = () => {
-        const body = stdin.read(len);
-        if (!body) {
-          stdin.once("readable", readBody);
-          return;
-        }
-        try {
-          resolve(JSON.parse(body.toString()));
-        } catch (e) {
-          reject(e);
-        }
-      };
-      readBody();
-    };
-    readLength();
-  });
+    }
+  }
 }
 
 /**
@@ -45,34 +60,55 @@ function writeNativeMessage(msg: unknown): void {
   process.stdout.write(buf);
 }
 
+function sleep(ms: number): Promise<void> {
+  return new Promise((r) => setTimeout(r, ms));
+}
+
+async function connectWithRetry(
+  onMessage: (msg: BridgeMessage) => void
+): Promise<{ send: (msg: BridgeMessage) => void } | null> {
+  for (let i = 0; i < 30; i++) {
+    try {
+      return await connectToSocket((msg) => onMessage(msg));
+    } catch {
+      await sleep(1000);
+    }
+  }
+  return null;
+}
+
 /**
  * Native Messaging Host として起動する。
- * Chrome 拡張 ↔ Unix socket (MCP サーバー) を中継する。
  */
 export async function startNativeHost(): Promise<void> {
-  process.stdin.resume();
-
-  // Unix socket に接続（MCP サーバーが listen 中）
+  const messageBuffer: BridgeMessage[] = [];
   let socketSend: ((msg: BridgeMessage) => void) | null = null;
 
-  try {
-    const { send } = await connectToSocket((msg) => {
-      // MCP サーバーからのメッセージを Chrome 拡張に転送
-      writeNativeMessage(msg);
-    });
-    socketSend = send;
-  } catch {
-    // MCP サーバーがまだ起動していない場合、ソケットなしで動作
-    // ツール情報はバッファして後で送る
-  }
+  // Chrome からのメッセージ読み取り
+  new NativeMessageReader(
+    (msg) => {
+      const bridgeMsg = msg as BridgeMessage;
+      if (socketSend) {
+        socketSend(bridgeMsg);
+      } else {
+        messageBuffer.push(bridgeMsg);
+      }
+    },
+    () => {
+      process.exit(0);
+    }
+  );
 
-  // Chrome 拡張からのメッセージを読み続ける
-  while (true) {
-    const msg = (await readNativeMessage()) as BridgeMessage;
+  // バックグラウンドで socket 接続
+  const conn = await connectWithRetry((msg) => {
+    writeNativeMessage(msg);
+  });
 
-    if (socketSend) {
-      // Unix socket 経由で MCP サーバーに転送
+  if (conn) {
+    socketSend = conn.send;
+    for (const msg of messageBuffer) {
       socketSend(msg);
     }
+    messageBuffer.length = 0;
   }
 }

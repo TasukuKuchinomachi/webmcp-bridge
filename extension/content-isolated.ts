@@ -7,7 +7,7 @@
 window.addEventListener("message", (event) => {
   if (event.data?.source !== "webmcp-bridge-main") return;
 
-  chrome.runtime.sendMessage(event.data);
+  chrome.runtime.sendMessage(event.data).catch(() => {});
 });
 
 // Extension background → MAIN world

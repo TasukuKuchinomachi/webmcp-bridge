@@ -1,9 +1,20 @@
 import fs from "node:fs";
 import path from "node:path";
 import os from "node:os";
+import { execSync } from "node:child_process";
 
-// Chrome 拡張の ID（公開後に確定。開発中は chrome://extensions から取得）
-const EXTENSION_ID = "EXTENSION_ID_PLACEHOLDER";
+const DEFAULT_EXTENSION_ID = "jdnfdmgpnnbihcpilknaaopmghjkimhc";
+
+function getExtensionId(): string {
+  const installIdx = process.argv.indexOf("--install");
+  if (installIdx !== -1 && process.argv[installIdx + 1]) {
+    return process.argv[installIdx + 1];
+  }
+  if (process.env.WEBMCP_EXTENSION_ID) {
+    return process.env.WEBMCP_EXTENSION_ID;
+  }
+  return DEFAULT_EXTENSION_ID;
+}
 
 const MANIFEST_NAME = "com.webmcp.bridge";
 
@@ -43,7 +54,6 @@ function findBinaryPath(): string {
   }
 
   // フォールバック: which webmcp-bridge
-  const { execSync } = require("node:child_process");
   try {
     return execSync("which webmcp-bridge", { encoding: "utf-8" }).trim();
   } catch {
@@ -63,7 +73,14 @@ function createWrapper(): string {
   const wrapperPath = path.join(wrapperDir, "native-host");
   const binPath = findBinaryPath();
 
-  const content = `#!/bin/sh\nexec node "${binPath}" --native-host\n`;
+  // node の絶対パスを使う（Chrome はシェルプロファイルを読まないため）
+  let nodePath = process.execPath;
+  try {
+    nodePath = execSync("which node", { encoding: "utf-8" }).trim();
+  } catch {
+    // process.execPath をフォールバック
+  }
+  const content = `#!/bin/sh\nexec "${nodePath}" "${binPath}" --native-host\n`;
   fs.writeFileSync(wrapperPath, content, { mode: 0o755 });
 
   return wrapperPath;
@@ -81,7 +98,7 @@ export function installManifest(): void {
       description: "WebMCP Bridge — expose WebMCP tools as MCP tools",
       path: wrapperPath,
       type: "stdio",
-      allowed_origins: [`chrome-extension://${EXTENSION_ID}/`],
+      allowed_origins: [`chrome-extension://${getExtensionId()}/`],
     };
 
     const manifestPath = path.join(manifestDir, `${MANIFEST_NAME}.json`);

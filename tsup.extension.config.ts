@@ -1,11 +1,7 @@
 import { defineConfig } from "tsup";
 
 export default defineConfig({
-  entry: [
-    "extension/background.ts",
-    "extension/content-main.ts",
-    "extension/content-isolated.ts",
-  ],
+  entry: ["extension/content-main.ts"],
   format: ["iife"],
   outDir: "extension/dist",
   platform: "browser",

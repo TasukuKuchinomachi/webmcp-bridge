@@ -1,27 +1,11 @@
 {
   "manifest_version": 3,
   "name": "WebMCP Bridge",
-  "version": "0.1.0",
-  "description": "Expose WebMCP tools to external MCP clients",
-  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA2JzPrwPrJSVcqNaOD+vJIZmknsSasPXRiRP6CsSUR/DrNIWAgYLDwoGCGxTS6FY6ZTMKjfAg0h+tZKi2B9Eoc43pv+i3+3LplAam9qRLBJXj/IjqUJFxp7Yu+ATEtWRdl2Uzbr5BbFbFLS7h4QZF814gN8KGM6FvEBEMIOVca2u55tFvqW0qbeg639y00A47NimTRuHph2b1J3IgrFYA2BhQQl0sX+8oS4GmEC2xeeZlI5eHEclrwFRB3DAV6Ze5CeN9uEpy+faqhFB+XcpWV9atBYHp7ShtA7M7uip9TtQLaZnuI1ZioIVghZo+YoG8vwtSthwDcS7+GuRjNO2uQwIDAQAB",
-  "permissions": [
-    "nativeMessaging",
-    "activeTab",
-    "scripting",
-    "storage",
-    "tabs"
-  ],
+  "version": "0.3.0",
+  "description": "Expose WebMCP tools on window.__webmcp_tools__ for AI agents",
+  "permissions": [],
   "host_permissions": ["<all_urls>"],
-  "background": {
-    "service_worker": "dist/background.global.js"
-  },
   "content_scripts": [
-    {
-      "matches": ["<all_urls>"],
-      "js": ["dist/content-isolated.global.js"],
-      "run_at": "document_start",
-      "world": "ISOLATED"
-    },
     {
       "matches": ["<all_urls>"],
       "js": ["dist/content-main.global.js"],

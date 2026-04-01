@@ -16,8 +16,8 @@ import {
  * - Unix socket で Native Host（Chrome 拡張）と通信
  */
 export async function startMCPServer(): Promise<void> {
-  // 現在のツール一覧
-  let tools: ToolInfo[] = [];
+  // ツール名 → { tool情報, tabId } の逆引きマップ
+  let toolMap = new Map<string, { tool: ToolInfo; tabId: number }>();
 
   // ツール呼び出しの pending リクエスト
   const pendingCalls = new Map<
@@ -31,18 +31,28 @@ export async function startMCPServer(): Promise<void> {
   // Native Host へメッセージを送る関数（接続後にセット）
   let sendToNativeHost: ((msg: BridgeMessage) => void) | null = null;
 
+  // MCP サーバー
+  const server = new Server(
+    { name: "webmcp-bridge", version: "0.1.0" },
+    { capabilities: { tools: { listChanged: true } } }
+  );
+
   // Unix socket サーバー起動
   const { server: _socketServer } = createSocketServer((msg, send) => {
     sendToNativeHost = send;
 
     switch (msg.type) {
-      case "tools-updated":
-        tools = msg.tools;
+      case "tools-updated": {
+        toolMap = new Map();
+        for (const tool of msg.tools) {
+          toolMap.set(tool.name, { tool, tabId: tool.tabId ?? 0 });
+        }
         // MCP クライアントにツール一覧の変更を通知
         server.notification({
           method: "notifications/tools/list_changed",
         }).catch(() => {});
         break;
+      }
 
       case "call-result": {
         const pending = pendingCalls.get(msg.id);
@@ -64,20 +74,14 @@ export async function startMCPServer(): Promise<void> {
     }
   });
 
-  // MCP サーバー（先に作成して socket ハンドラから参照できるようにする）
-  const server = new Server(
-    { name: "webmcp-bridge", version: "0.1.0" },
-    { capabilities: { tools: { listChanged: true } } }
-  );
-
   server.setRequestHandler(ListToolsRequestSchema, async () => {
     return {
-      tools: tools.map((t) => ({
-        name: t.name,
-        description: t.description,
+      tools: Array.from(toolMap.values()).map(({ tool }) => ({
+        name: tool.name,
+        description: tool.description,
         inputSchema: {
           type: "object" as const,
-          ...t.inputSchema,
+          ...tool.inputSchema,
         },
       })),
     };
@@ -93,6 +97,14 @@ export async function startMCPServer(): Promise<void> {
       };
     }
 
+    const entry = toolMap.get(name);
+    if (!entry) {
+      return {
+        content: [{ type: "text", text: `Tool "${name}" not found` }],
+        isError: true,
+      };
+    }
+
     const id = crypto.randomUUID();
 
     const result = await new Promise<{
@@ -103,8 +115,9 @@ export async function startMCPServer(): Promise<void> {
       sendToNativeHost!({
         type: "call-tool",
         id,
-        name,
+        name: entry.tool.originalName || entry.tool.name,
         args: (args ?? {}) as Record<string, unknown>,
+        tabId: entry.tabId,
       });
 
       // タイムアウト 30秒

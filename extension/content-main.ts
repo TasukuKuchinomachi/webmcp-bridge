@@ -55,6 +55,11 @@ function patchModelContext(mc: any): void {
 window.addEventListener("message", async (event) => {
   if (event.data?.source !== "webmcp-bridge-isolated") return;
 
+  if (event.data.type === "request-tools") {
+    notifyToolsUpdated();
+    return;
+  }
+
   if (event.data.type === "call-tool") {
     const { id, name, args } = event.data;
     const tool = TOOLS[name];

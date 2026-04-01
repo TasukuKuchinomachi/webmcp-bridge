@@ -6,14 +6,16 @@ import os from "node:os";
 /** MCP サーバー ↔ Native Host 間のメッセージ型 */
 export type BridgeMessage =
   | { type: "tools-updated"; tools: ToolInfo[] }
-  | { type: "call-tool"; id: string; name: string; args: Record<string, unknown> }
+  | { type: "call-tool"; id: string; name: string; args: Record<string, unknown>; tabId?: number }
   | { type: "call-result"; id: string; result: { content: Array<{ type: "text"; text: string }> } }
   | { type: "call-error"; id: string; error: string };
 
 export interface ToolInfo {
   name: string;
+  originalName?: string;
   description: string;
   inputSchema: Record<string, unknown>;
+  tabId?: number;
 }
 
 const SOCKET_DIR = path.join(os.homedir(), ".webmcp-bridge");
